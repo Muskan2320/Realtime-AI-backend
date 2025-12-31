@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Realtime AI Backend Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 40px auto;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      min-height: 150px;
+      background: #fafafa;
+      white-space: pre-wrap;
+    }
+    .system {
+      color: #666;
+      font-style: italic;
+    }
+    .assistant {
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Realtime AI Backend Demo</h2>
+
+  <textarea id="prompt" placeholder="Type your message here..."></textarea>
+  <br />
+  <button onclick="sendMessage()">Send</button>
+
+  <div id="output"></div>
+
+  <script>
+  let ws = null;
+  let output = document.getElementById("output");
+  let startedResponse = false;
+
+  // 1️⃣ Connect immediately when page loads
+  window.onload = () => {
+    connect();
+  };
+
+  function connect() {
+    ws = new WebSocket("ws://localhost:8000/ws/session");
+
+    ws.onopen = () => {
+      appendSystem("Connected.");
+    };
+
+    ws.onmessage = (event) => {
+      if (event.data.startsWith("Connected to session")) {
+        appendSystem(event.data);
+        return;
+      }
+
+      if (!startedResponse) {
+        output.innerText += "\n\nAssistant:\n";
+        startedResponse = true;
+      }
+
+      output.innerText += event.data;
+    };
+
+    ws.onclose = () => {
+      appendSystem("\n[Session closed]");
+      ws = null;
+    };
+  }
+
+  // 2️⃣ Send messages ONLY after connection exists
+  function sendMessage() {
+    const text = document.getElementById("prompt").value.trim();
+    if (!text) return;
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      appendSystem("Connection not ready yet.");
+      return;
+    }
+
+    output.innerText += `\n\nYou:\n${text}\n`;
+    startedResponse = false;
+    ws.send(text);
+    document.getElementById("prompt").value = "";
+  }
+
+  function appendSystem(message) {
+    output.innerText += `\n${message}\n`;
+  }
+</script>
+
+
+
+</body>
+</html>
